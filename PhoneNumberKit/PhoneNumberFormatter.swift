@@ -69,9 +69,9 @@ open class PhoneNumberFormatter: Foundation.Formatter {
 
     #if os(Linux)
     
-    // Linux doesn't support the Obj-C runtime, so autoreleasing pointers won't work.
-    // Careful: I guess this could cause some discomfort because these aren't autoreleasing pointers. Be careful.
-    open override func getObjectValue(_ obj: UnsafeMutablePointer<AnyObject?>?, for string: String, errorDescription error: UnsafeMutablePointer<NSString?>?) -> Bool {
+    // Linux doesn't support the Obj-C runtime, so autoreleasing pointers won't work -- the declarations of getObjectValue() in apple/swift-corelibs-foundation use UnsafeMutablePointers instead, so I'll do the same here.
+    // Also, this isn't currently an override on Linux, for some reason...? Since it's not used anywhere in this package I'm tempted to get rid of it, but I'll keep it for now...
+    open func getObjectValue(_ obj: UnsafeMutablePointer<AnyObject?>?, for string: String, errorDescription error: UnsafeMutablePointer<NSString?>?) -> Bool {
         if self.generatesPhoneNumber {
             do {
                 obj?.pointee = try self.phoneNumberKit.parse(string) as AnyObject?
@@ -167,7 +167,9 @@ open class PhoneNumberFormatter: Foundation.Formatter {
         // If proposed length > orig length - orig range length -> this is replace action
         return .replace
     }
-
+    
+    // apple/swift-corelibs-foundation contains no function matching this, so I'm thinking it's just not there on Linux.
+    #if !os(Linux)
     open override func isPartialStringValid(
         _ partialStringPtr: AutoreleasingUnsafeMutablePointer<NSString>,
         proposedSelectedRange proposedSelRangePtr: NSRangePointer?,
@@ -229,6 +231,7 @@ open class PhoneNumberFormatter: Foundation.Formatter {
         partialStringPtr.pointee = formattedNationalNumber as NSString
         return false
     }
+    #endif
 }
 
 private extension NSString {
