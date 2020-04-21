@@ -50,13 +50,13 @@ open class PhoneNumberFormatter: Foundation.Formatter {
         self.partialFormatter = PartialFormatter(phoneNumberKit: self.phoneNumberKit, defaultRegion: self.defaultRegion, withPrefix: self.withPrefix)
         super.init(coder: aDecoder)
     }
-}
+    
+    // The Linux Compiler complains when you try overriding functions in an extension, so I've combined the extension with the rest of the class.
+    
+    // MARK: -
 
-// MARK: -
+    // MARK: NSFormatter implementation
 
-// MARK: NSFormatter implementation
-
-extension PhoneNumberFormatter {
     open override func string(for obj: Any?) -> String? {
         if let pn = obj as? PhoneNumber {
             return self.phoneNumberKit.format(pn, toType: self.withPrefix ? .international : .national)
@@ -67,6 +67,27 @@ extension PhoneNumberFormatter {
         return nil
     }
 
+    #if os(Linux)
+    
+    // Linux doesn't support the Obj-C runtime, so autoreleasing pointers won't work.
+    // Careful: I guess this could cause some discomfort because these aren't autoreleasing pointers. Be careful.
+    open override func getObjectValue(_ obj: UnsafeMutablePointer<AnyObject?>?, for string: String, errorDescription error: UnsafeMutablePointer<NSString?>?) -> Bool {
+        if self.generatesPhoneNumber {
+            do {
+                obj?.pointee = try self.phoneNumberKit.parse(string) as AnyObject?
+                return true
+            } catch (let e) {
+                error?.pointee = e.localizedDescription as NSString
+                return false
+            }
+        } else {
+            obj?.pointee = string as NSString
+            return true
+        }
+    }
+    
+    #else
+    
     open override func getObjectValue(_ obj: AutoreleasingUnsafeMutablePointer<AnyObject?>?, for string: String, errorDescription error: AutoreleasingUnsafeMutablePointer<NSString?>?) -> Bool {
         if self.generatesPhoneNumber {
             do {
@@ -82,6 +103,8 @@ extension PhoneNumberFormatter {
         }
     }
 
+    #endif
+    
     // MARK: Phone number formatting
 
     /**

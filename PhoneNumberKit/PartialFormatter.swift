@@ -191,7 +191,16 @@ public final class PartialFormatter {
         var processedNumber = rawNumber
         do {
             if let internationalPrefix = currentMetadata?.internationalPrefix {
+                #if os(Linux)
+                // String(format:arguments:) doesn't work on Linux because CVArgs aren't a thing. I'll do this instead:
+                let prefixPattern = PhoneNumberPatterns.iddPattern.replacingOccurrences(of: "%@", with: internationalPrefix)
+                // We don't need to do anything else because there is only one instance of "%@" in this pattern.
+                #else
+                // This is the original line.
                 let prefixPattern = String(format: PhoneNumberPatterns.iddPattern, arguments: [internationalPrefix])
+                // I'm not sure if the original line is faster or not, so I'll just leave it as-is for Darwin.
+                #endif
+                
                 let matches = try regexManager?.matchedStringByRegex(prefixPattern, string: rawNumber)
                 if let m = matches?.first {
                     let startCallingCode = m.count
@@ -214,7 +223,19 @@ public final class PartialFormatter {
         } else {
             do {
                 if let nationalPrefix = currentMetadata?.nationalPrefixForParsing {
+                    
+                    #if os(Linux)
+                    // String(format:arguments:) doesn't work on Linux because CVArgs aren't a thing. I'll do this instead:
+                    let nationalPrefixPattern = PhoneNumberPatterns.nationalPrefixParsingPattern.replacingOccurrences(of: "%@", with: nationalPrefix)
+                    // We don't need to do anything else because (again) there is only one instance of "%@" in this pattern.
+                    #else
+                    // This is the original line.
                     let nationalPrefixPattern = String(format: PhoneNumberPatterns.nationalPrefixParsingPattern, arguments: [nationalPrefix])
+                    
+                    #endif
+                    
+                    
+                    
                     let matches = try regexManager?.matchedStringByRegex(nationalPrefixPattern, string: rawNumber)
                     if let m = matches?.first {
                         startOfNationalNumber = m.count
@@ -306,7 +327,21 @@ public final class PartialFormatter {
         guard let regexManager = regexManager else { return nil }
         for format in formats {
             if let pattern = format.pattern, let formatTemplate = format.format {
-                let patternRegExp = String(format: PhoneNumberPatterns.formatPattern, arguments: [pattern])
+                
+                #if os(Linux)
+                // String(format:arguments:) doesn't work on Linux because CVArgs aren't a thing. I'll do this instead:
+                let patternRegExp =  PhoneNumberPatterns.nationalPrefixParsingPattern.replacingOccurrences(of: "%@", with: pattern)
+                // We don't need to do anything else because (again) there is only one instance of "%@" in this pattern.
+                #else
+                // This is the original line.
+                //let patternRegExp = String(format: PhoneNumberPatterns.formatPattern, arguments: [pattern])
+                
+                let patternRegExp =  PhoneNumberPatterns.nationalPrefixParsingPattern.replacingOccurrences(of: "%@", with: pattern)
+                
+                #endif
+                
+                
+                
                 do {
                     let matches = try regexManager.regexMatches(patternRegExp, string: rawNumber)
                     if matches.count > 0 {

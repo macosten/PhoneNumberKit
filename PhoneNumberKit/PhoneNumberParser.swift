@@ -267,7 +267,17 @@ final class PhoneNumberParser {
         guard let possibleNationalPrefix = metadata.nationalPrefixForParsing else {
             return
         }
+        
+        #if os(Linux)
+        // String(format:arguments:) doesn't work on Linux because CVArgs aren't a thing. I'll do this instead:
+        let prefixPattern =  "^(?:%@)".replacingOccurrences(of: "%@", with: possibleNationalPrefix)
+        // We don't need to do anything else because (again) there is only one instance of "%@" in this pattern.
+        #else
+        // This is the original line.
         let prefixPattern = String(format: "^(?:%@)", possibleNationalPrefix)
+        #endif
+        
+        
         do {
             let matches = try regex.regexMatches(prefixPattern, string: number)
             if let firstMatch = matches.first {
